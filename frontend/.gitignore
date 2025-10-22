@@ -1,0 +1,6 @@
+# Files
+!.gitignore
+!index.html
+
+# Folder
+!assets/

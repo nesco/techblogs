@@ -51,7 +51,7 @@ func blogsDataToCards(blogsData []BlogInfo) (string, error) {
 	var buffer bytes.Buffer
 	templateParsed := template.Must(template.New("BlogEntries").Parse(blogEntriesCardTemplate))
 	if err := templateParsed.Execute(&buffer, blogsData); err != nil {
-		return "", fmt.Errorf("Error parsing blog entries template: %w", err)
+		return "", fmt.Errorf("Error parsing blog entries: %w", err)
 	}
 
 	return buffer.String(), nil

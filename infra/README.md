@@ -2,6 +2,8 @@
 
 ## Frontend
 
-Served directly by nginx with a reverse proxy for the back.
+Served directly by nginx.
 
 ## Backend
+
+Nginx acts like a reverse proxy for the back.

@@ -23,7 +23,20 @@ type BlogInfo struct {
 	LatestArticleName string `json:"latestArticleName"`
 }
 
-var orgData = []BlogInfo{{"https://stripe.com/blog", "Stripe", "https://stripe.com/blog/introducing-stablecoin-payments-for-subscriptions", "Introducing stablecoin payments for subscriptions"}}
+var orgData = []BlogInfo{
+	{
+		"https://stripe.com/blog",
+		"Stripe",
+		"https://stripe.com/blog/introducing-stablecoin-payments-for-subscriptions",
+		"Introducing stablecoin payments for subscriptions",
+	},
+	{
+		"https://www.datadoghq.com/blog/",
+		"Datadoghq",
+		"https://www.datadoghq.com/state-of-cloud-security/",
+		"State of Cloud Security",
+	},
+}
 var startTime = time.Now()
 
 func blogsDataToCards(blogsData []BlogInfo) (string, error) {
@@ -38,7 +51,7 @@ func blogsDataToCards(blogsData []BlogInfo) (string, error) {
 	var buffer bytes.Buffer
 	templateParsed := template.Must(template.New("BlogEntries").Parse(blogEntriesCardTemplate))
 	if err := templateParsed.Execute(&buffer, blogsData); err != nil {
-		return "", fmt.Errorf("Error parsing blog entries card template: %w", err)
+		return "", fmt.Errorf("Error parsing blog entries template: %w", err)
 	}
 
 	return buffer.String(), nil

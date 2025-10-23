@@ -86,13 +86,11 @@ jobs:
 
       # ── Download artifacts only if needed ──────────────────────────────────────
       - uses: actions/download-artifact@v4
-        if: steps.changes.outputs.frontend == 'true'
         with:
           name: techblogs-frontend
           path: ./artifacts/frontend
 
       - uses: actions/download-artifact@v4
-        if: steps.changes.outputs.backend == 'true'
         with:
           name: techblogs-backend
           path: ./artifacts/backend
@@ -113,10 +111,10 @@ jobs:
             need_restart=0
 
             # Nginx config
-            if ! cmp -s /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf; then
-              sudo install -m 644 /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf
+            if ! cmp -s /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblo.gs; then
+              sudo install -m 644 /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblo.gs
               need_reload=1
-              sudo ln -sfn /etc/nginx/sites-available/techblogs.conf /etc/nginx/sites-enabled/techblogs.conf
+              sudo ln -sfn /etc/nginx/sites-available/techblo.gs /etc/nginx/sites-enabled/techblo.gs
             fi
 
             # systemd unit
@@ -149,10 +147,10 @@ jobs:
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
-          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$REL/{frontend,backend}'"
+          ssh "$SSH_USER@$SSH_HOST" "mkdir -p \"$REL/frontend\" \"$REL/backend\""
 
-      - name: Rsync frontend
-        if: steps.changes.outputs.frontend == 'true'
+      - name: Rsync frontend + backend
+        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -161,18 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
-          rsync -az --delete ./artifacts/frontend/apps/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
-
-      - name: Rsync backend
-        if: steps.changes.outputs.backend == 'true'
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
-          TS: ${{ steps.ts.outputs.value }}
-        run: |
-          set -euo pipefail
-          REL="$VPS_BASE/releases/$TS"
+          rsync -az --delete ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
           rsync -az ./artifacts/backend/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
 
       # ── Ownership & perms (only if we shipped anything) ───────────────────────
@@ -186,15 +173,14 @@ jobs:
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
-          ssh "$SSH_USER@$SSH_HOST" "
-            set -euo pipefail
-            if [ -d \"\$REL/frontend\" ]; then
-              sudo chown -R root:www-data      \"\$REL/frontend\"
-              sudo chmod -R a+rX               \"\$REL/frontend\"
+          ssh "$SSH_USER@$SSH_HOST" "set -euo pipefail
+            if [ -d \"$REL/frontend\" ]; then
+              sudo chown -R root:www-data \"$REL/frontend\"
+              sudo chmod -R a+rX        \"$REL/frontend\"
             fi
-            if [ -d \"\$REL/backend\" ]; then
-              sudo chown -R techblogs:www-data \"\$REL/backend\"
-              sudo chmod -R u+rwX,g+rX         \"\$REL/backend\"
+            if [ -d \"$REL/backend\" ]; then
+              sudo chown -R techblogs:www-data \"$REL/backend\"
+              sudo chmod -R u+rwX,g+rX         \"$REL/backend\"
             fi
           "
 

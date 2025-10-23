@@ -118,7 +118,8 @@ func main() {
 	mux.HandleFunc("/health", healthEndpoint)
 	mux.HandleFunc("/organisations", organisationEndpoint)
 
-	ln, err := getListener("")
+	addr := os.Getenv("LISTEN_ADDR")
+	ln, err := getListener(addr)
 
 	if err != nil {
 		sugar.Fatal(err)

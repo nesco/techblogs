@@ -1,0 +1,221 @@
+name: Deploy techblogs
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-techblogs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'apps/backend/go.mod'
+          cache: true
+
+      - name: Build backend (Linux amd64)
+        working-directory: apps/backend
+        run: |
+          mkdir -p build
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+            go build -ldflags="-s -w" -o build/techblogs-backend
+          file build/techblogs-backend
+
+      - name: Upload artifacts (frontend + backend)
+        uses: actions/upload-artifact@v4
+        with:
+          name: techblogs-artifacts
+          retention-days: 1
+          path: |
+            apps/frontend/**
+            apps/backend/build/techblogs-backend
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: techblogs-artifacts
+          path: ./artifacts
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          # Fetches all history so paths-filter can compare commits
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - 'infra/**'
+
+      - name: Create timestamp
+        id: ts
+        run: echo "value=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Pin known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # ---------- OPTIONAL: update infra only when infra/** changed ----------
+      - name: Update infra on VPS (only if infra changed)
+        if: steps.changes.outputs.infra == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          rsync -avz infra/nginx.conf "$SSH_USER@$SSH_HOST:/tmp/techblogs.nginx.conf"
+          rsync -avz infra/techblogs-backend.service "$SSH_USER@$SSH_HOST:/tmp/techblogs-backend.service"
+          ssh "$SSH_USER@$SSH_HOST" '
+            set -euo pipefail
+            need_reload=0
+            need_restart=0
+
+            # Nginx config
+            if ! cmp -s /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf; then
+              sudo install -m 644 /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf
+              need_reload=1
+              # ensure enabled symlink exists
+              sudo ln -sfn /etc/nginx/sites-available/techblogs.conf /etc/nginx/sites-enabled/techblogs.conf
+            fi
+
+            # systemd unit
+            if ! cmp -s /tmp/techblogs-backend.service /etc/systemd/system/techblogs-backend.service; then
+              sudo install -m 644 /tmp/techblogs-backend.service /etc/systemd/system/techblogs-backend.service
+              sudo systemctl daemon-reload
+              need_restart=1
+            fi
+
+            if [ "$need_reload" -eq 1 ]; then
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
+            if [ "$need_restart" -eq 1 ]; then
+              sudo systemctl enable techblogs-backend
+              sudo systemctl restart techblogs-backend
+            fi
+
+            echo "Infra update complete (reload=$need_reload, restart=$need_restart)"
+          '
+
+      # ---------- Rsync release ----------
+      - name: Rsync release to VPS
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+          TS: ${{ steps.ts.outputs.value }}
+        run: |
+          set -euo pipefail
+          REL="$VPS_BASE/releases/$TS"
+          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$REL/{frontend,backend}'"
+          rsync -az --delete ./artifacts/apps/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
+          rsync -az ./artifacts/apps/backend/build/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
+
+      # ---------- Ensure correct ownership & permissions ----------
+      - name: Fix ownership & perms
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+          TS: ${{ steps.ts.outputs.value }}
+        run: |
+          set -euo pipefail
+          REL="$VPS_BASE/releases/$TS"
+          ssh "$SSH_USER@$SSH_HOST" "
+            set -euo pipefail
+            sudo chown -R root:www-data      \"\$REL/frontend\"
+            sudo chmod -R a+rX               \"\$REL/frontend\"
+            sudo chown -R techblogs:www-data \"\$REL/backend\"
+            sudo chmod -R u+rwX,g+rX         \"\$REL/backend\"
+          "
+
+
+      # ---------- Activate + health check (auto-rollback on failure) ----------
+      - name: Activate, restart, reload, health-check (with rollback)
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+          TS: ${{ steps.ts.outputs.value }}
+        run: |
+          set -euo pipefail
+          REL="$VPS_BASE/releases/$TS"
+
+          ssh "$SSH_USER@$SSH_HOST" bash -euxo pipefail -c "
+            ln -sfn '$REL' '$VPS_BASE/current'
+            systemctl restart techblogs-backend
+            nginx -t && systemctl reload nginx
+
+            # Socket-level health check
+            for i in {1..30}; do
+              if curl --fail --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health >/dev/null 2>&1; then
+                echo 'Health check PASSED'
+                exit 0
+              fi
+              sleep 1
+            done
+
+            # If we get here, all retries failed
+            echo 'Health check FAILED — rolling back to previous release' >&2
+            PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
+            if [ -n \"\$PREV\" ]; then
+              ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
+              systemctl restart techblogs-backend
+              systemctl reload nginx
+            fi
+            exit 1
+          "
+
+      # ---------- Prune ----------
+      - name: Prune old releases (keep last 10)
+        if: ${{ always() }}
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+        run: |
+          ssh "$SSH_USER@$SSH_HOST" "cd '$VPS_BASE/releases' && ls -1dt * | tail -n +11 | xargs -r rm -rf"
+
+      # ---------- Diagnostics on failure ----------
+      - name: Gather logs on failure
+        if: ${{ failure() }}
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh "$SSH_USER@$SSH_HOST" '
+            echo "=== systemd status techblogs-backend ==="
+            sudo systemctl status --no-pager techblogs-backend || true
+            echo "=== last 200 journal lines ==="
+            sudo journalctl -u techblogs-backend -n 200 --no-pager || true
+            echo "=== nginx config test ==="
+            sudo nginx -t || true
+          ' | sed -e "s/\x1b\[[0-9;]*m//g"
+
+      - name: Summary
+        if: ${{ success() }}
+        run: echo "✅ Deployed release ${{ steps.ts.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
+

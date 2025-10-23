@@ -4,6 +4,7 @@
 !.gitignore
 
 # Folders
-!apps
+!.github/
+!apps/
 !infra/
 

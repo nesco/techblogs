@@ -1,0 +1,38 @@
+# infra/techblogs-backend.service
+[Unit]
+Description=Techblogs Go backend
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=techblogs
+Group=www-data
+Environment=LISTEN_ADDR=unix:/run/techblogs-api/techblogs-api.sock
+ExecStart=/srv/techblogs/current/backend/techblogs-backend
+RuntimeDirectory=techblogs-api
+RuntimeDirectoryMode=0755
+UMask=0007
+Restart=on-failure
+RestartSec=2s
+
+# Under [Service]
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/techblogs-api
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+SystemCallFilter=@system-service
+MemoryDenyWriteExecute=true
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+# Optional resource limits
+CPUQuota=25%
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target
+

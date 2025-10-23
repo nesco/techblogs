@@ -7,6 +7,7 @@
   <!-- <meta http-equiv="Cache-Control" content="max-age=604800"> -->
   <link rel="stylesheet" href="assets/styles.css">
   <title>Tech Blogs</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
 </head>
 
 <body>
@@ -32,12 +33,7 @@
     </section>
     <section>
       <h2>Organization</h2>
-      <div class="cards-container">
-        <article class="card">
-          <h3><a href="https://stripe.com/blog">Stripe</a></h3>
-          <p>Latest: <a href="https://stripe.com/blog/introducing-stablecoin-payments-for-subscriptions">Introducing
-              stablecoin payments for subscriptions</a></p>
-        </article>
+      <div class="cards-container" hx-get="/api/organizations" hx-trigger="load">
       </div>
     </section>
 

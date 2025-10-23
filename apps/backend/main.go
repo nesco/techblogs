@@ -37,6 +37,22 @@ var orgData = []BlogInfo{
 		"State of Cloud Security",
 	},
 }
+
+var peopleData = []BlogInfo{
+	{
+		"https://buttondown.com/hillelwayne/archive/",
+		"Hillel Wayne",
+		"https://buttondown.com/hillelwayne/archive/modal-editing-is-a-weird-historical-contingency/",
+		"Modal editing is a weird historical contingency we have through sheer happenstance",
+	},
+	{
+		"https://blog.samaltman.com/",
+		"Sam Altman",
+		"https://blog.samaltman.com/sora-update-number-1",
+		"Sora update #1",
+	},
+}
+
 var startTime = time.Now()
 
 func blogsDataToCards(blogsData []BlogInfo) (string, error) {
@@ -79,6 +95,22 @@ func organisationEndpoint(w http.ResponseWriter, r *http.Request) {
 		var htmlContent string
 		var err error
 		if htmlContent, err = blogsDataToCards(orgData); err != nil {
+			panic(err)
+		}
+		w.Header().Set("Content-Type", "text/html")
+		io.WriteString(w, htmlContent)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func peopleEndpoint(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case http.MethodGet:
+		var htmlContent string
+		var err error
+		if htmlContent, err = blogsDataToCards(peopleData); err != nil {
 			panic(err)
 		}
 		w.Header().Set("Content-Type", "text/html")
@@ -135,6 +167,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthEndpoint)
 	mux.HandleFunc("/organizations", organisationEndpoint)
+	mux.HandleFunc("/people", peopleEndpoint)
 
 	addr := os.Getenv("LISTEN_ADDR")
 	ln, err := getListener(addr)

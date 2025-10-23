@@ -134,7 +134,7 @@ func main() {
 	// Setting-up the HTTP Server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthEndpoint)
-	mux.HandleFunc("/organisations", organisationEndpoint)
+	mux.HandleFunc("/organizations", organisationEndpoint)
 
 	addr := os.Getenv("LISTEN_ADDR")
 	ln, err := getListener(addr)

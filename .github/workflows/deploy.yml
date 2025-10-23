@@ -159,8 +159,8 @@ jobs:
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
-          rsync -az --delete ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
-          rsync -az ./artifacts/backend/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
+          rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
+          rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
 
       # ── Ownership & perms (only if we shipped anything) ───────────────────────
       - name: Fix ownership & perms

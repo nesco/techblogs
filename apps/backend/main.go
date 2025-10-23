@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -13,7 +16,34 @@ import (
 	"go.uber.org/zap"
 )
 
+type BlogInfo struct {
+	BlogHref          string `json:"blogHref"`
+	BlogName          string `json:"blogName"`
+	LatestArticleHref string `json:"latestArticleHref"`
+	LatestArticleName string `json:"latestArticleName"`
+}
+
+var orgData = []BlogInfo{{"https://stripe.com/blog", "Stripe", "https://stripe.com/blog/introducing-stablecoin-payments-for-subscriptions", "Introducing stablecoin payments for subscriptions"}}
 var startTime = time.Now()
+
+func blogsDataToCards(blogsData []BlogInfo) (string, error) {
+	const blogEntriesCardTemplate = `
+		{{- range . -}}
+		<article class="card">
+		 <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+			<p>Latest: <a href="{{ .LatestArticleHref }}">{{ .LatestArticleName }}</a></p>
+		</article>
+		{{- end -}}
+		`
+	var buffer bytes.Buffer
+	templateParsed := template.Must(template.New("BlogEntries").Parse(blogEntriesCardTemplate))
+	if err := templateParsed.Execute(&buffer, blogsData); err != nil {
+		return "", fmt.Errorf("Error parsing blog entries card template: %w", err)
+	}
+
+	return buffer.String(), nil
+
+}
 
 func healthEndpoint(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -25,8 +55,16 @@ func healthEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func organisationEndpoint(w http.ResponseWriter, r *http.Request) {
+
 	switch r.Method {
 	case http.MethodGet:
+		var htmlContent string
+		var err error
+		if htmlContent, err = blogsDataToCards(orgData); err != nil {
+			panic(err)
+		}
+		w.Header().Set("Content-Type", "text/html")
+		io.WriteString(w, htmlContent)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -78,6 +116,7 @@ func main() {
 	// Setting-up the HTTP Server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthEndpoint)
+	mux.HandleFunc("/organisations", organisationEndpoint)
 
 	ln, err := getListener("")
 

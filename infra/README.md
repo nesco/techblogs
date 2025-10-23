@@ -2,6 +2,6 @@
 
 ## Frontend
 
-The frontend is served by nginx.
+Served directly by nginx.
 
-- techblo.gs contains the site nginx configuration
+## Backend

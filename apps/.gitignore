@@ -1,9 +1,6 @@
-*
-
 # Files
 !.gitignore
 
 # Folders
-!apps
-!infra/
-
+!backend/
+!frontend/

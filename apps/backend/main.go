@@ -46,12 +46,17 @@ func blogsDataToCards(blogsData []BlogInfo) (string, error) {
 }
 
 func healthEndpoint(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"status":    "ok",
-		"timestamp": time.Now().UTC().UTC().Format(time.RFC3339),
-		"uptime_s":  time.Since(startTime).Seconds(),
-	})
+	switch r.Method {
+	case http.MethodGet:
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":    "ok",
+			"timestamp": time.Now().UTC().UTC().Format(time.RFC3339),
+			"uptime_s":  time.Since(startTime).Seconds(),
+		})
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func organisationEndpoint(w http.ResponseWriter, r *http.Request) {

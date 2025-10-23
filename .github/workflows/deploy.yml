@@ -29,31 +29,34 @@ jobs:
             go build -ldflags="-s -w" -o build/techblogs-backend
           file build/techblogs-backend
 
-      - name: Upload artifacts (frontend + backend)
+      # ── Artifacts (split) ───────────────────────────────────────────────────────
+      - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: techblogs-artifacts
+          name: techblogs-frontend
+          path: apps/frontend          # keep folder structure, avoid globs
           retention-days: 1
-          path: |
-            apps/frontend/**
-            apps/backend/build/techblogs-backend
+          if-no-files-found: error
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: techblogs-backend
+          path: apps/backend/build/techblogs-backend
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: techblogs-artifacts
-          path: ./artifacts
-
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          # Fetches all history so paths-filter can compare commits
           fetch-depth: 0
 
+      # What changed?
       - name: Detect changed paths
         id: changes
         uses: dorny/paths-filter@v3
@@ -61,6 +64,10 @@ jobs:
           filters: |
             infra:
               - 'infra/**'
+            frontend:
+              - 'apps/frontend/**'
+            backend:
+              - 'apps/backend/**'
 
       - name: Create timestamp
         id: ts
@@ -77,7 +84,20 @@ jobs:
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      # ---------- OPTIONAL: update infra only when infra/** changed ----------
+      # ── Download artifacts only if needed ──────────────────────────────────────
+      - uses: actions/download-artifact@v4
+        if: steps.changes.outputs.frontend == 'true'
+        with:
+          name: techblogs-frontend
+          path: ./artifacts/frontend
+
+      - uses: actions/download-artifact@v4
+        if: steps.changes.outputs.backend == 'true'
+        with:
+          name: techblogs-backend
+          path: ./artifacts/backend
+
+      # ── OPTIONAL: update infra only when infra/** changed ──────────────────────
       - name: Update infra on VPS (only if infra changed)
         if: steps.changes.outputs.infra == 'true'
         env:
@@ -96,7 +116,6 @@ jobs:
             if ! cmp -s /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf; then
               sudo install -m 644 /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblogs.conf
               need_reload=1
-              # ensure enabled symlink exists
               sudo ln -sfn /etc/nginx/sites-available/techblogs.conf /etc/nginx/sites-enabled/techblogs.conf
             fi
 
@@ -119,8 +138,9 @@ jobs:
             echo "Infra update complete (reload=$need_reload, restart=$need_restart)"
           '
 
-      # ---------- Rsync release ----------
-      - name: Rsync release to VPS
+      # ── Rsync release only when something to deploy ────────────────────────────
+      - name: Prepare release dir
+        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -130,11 +150,34 @@ jobs:
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
           ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$REL/{frontend,backend}'"
-          rsync -az --delete ./artifacts/apps/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
-          rsync -az ./artifacts/apps/backend/build/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
 
-      # ---------- Ensure correct ownership & permissions ----------
+      - name: Rsync frontend
+        if: steps.changes.outputs.frontend == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+          TS: ${{ steps.ts.outputs.value }}
+        run: |
+          set -euo pipefail
+          REL="$VPS_BASE/releases/$TS"
+          rsync -az --delete ./artifacts/frontend/apps/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
+
+      - name: Rsync backend
+        if: steps.changes.outputs.backend == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+          TS: ${{ steps.ts.outputs.value }}
+        run: |
+          set -euo pipefail
+          REL="$VPS_BASE/releases/$TS"
+          rsync -az ./artifacts/backend/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
+
+      # ── Ownership & perms (only if we shipped anything) ───────────────────────
       - name: Fix ownership & perms
+        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -145,50 +188,64 @@ jobs:
           REL="$VPS_BASE/releases/$TS"
           ssh "$SSH_USER@$SSH_HOST" "
             set -euo pipefail
-            sudo chown -R root:www-data      \"\$REL/frontend\"
-            sudo chmod -R a+rX               \"\$REL/frontend\"
-            sudo chown -R techblogs:www-data \"\$REL/backend\"
-            sudo chmod -R u+rwX,g+rX         \"\$REL/backend\"
+            if [ -d \"\$REL/frontend\" ]; then
+              sudo chown -R root:www-data      \"\$REL/frontend\"
+              sudo chmod -R a+rX               \"\$REL/frontend\"
+            fi
+            if [ -d \"\$REL/backend\" ]; then
+              sudo chown -R techblogs:www-data \"\$REL/backend\"
+              sudo chmod -R u+rwX,g+rX         \"\$REL/backend\"
+            fi
           "
 
-
-      # ---------- Activate + health check (auto-rollback on failure) ----------
-      - name: Activate, restart, reload, health-check (with rollback)
+      # ── Activate + health checks (only if we shipped anything) ────────────────
+      - name: Activate, (maybe) restart & health-check (with rollback)
+        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
           TS: ${{ steps.ts.outputs.value }}
+          FRONTEND_CHANGED: ${{ steps.changes.outputs.frontend }}
+          BACKEND_CHANGED:  ${{ steps.changes.outputs.backend }}
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
 
           ssh "$SSH_USER@$SSH_HOST" bash -euxo pipefail -c "
+            # Activate new release
             ln -sfn '$REL' '$VPS_BASE/current'
-            systemctl restart techblogs-backend
-            nginx -t && systemctl reload nginx
 
-            # Socket-level health check
-            for i in {1..30}; do
-              if curl --fail --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health >/dev/null 2>&1; then
-                echo 'Health check PASSED'
-                exit 0
-              fi
-              sleep 1
-            done
-
-            # If we get here, all retries failed
-            echo 'Health check FAILED — rolling back to previous release' >&2
-            PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
-            if [ -n \"\$PREV\" ]; then
-              ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
+            if [ '$BACKEND_CHANGED' = 'true' ]; then
               systemctl restart techblogs-backend
-              systemctl reload nginx
             fi
-            exit 1
+
+            if [ '$FRONTEND_CHANGED' = 'true' ] || [ '$BACKEND_CHANGED' = 'true' ]; then
+              nginx -t && systemctl reload nginx || true
+            fi
+
+            if [ '$BACKEND_CHANGED' = 'true' ]; then
+              # Socket-level health check of backend
+              for i in {1..30}; do
+                if curl --fail --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health >/dev/null 2>&1; then
+                  echo 'Health check PASSED'
+                  exit 0
+                fi
+                sleep 1
+              done
+
+              echo 'Health check FAILED — rolling back to previous release' >&2
+              PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
+              if [ -n \"\$PREV\" ]; then
+                ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
+                systemctl restart techblogs-backend || true
+                systemctl reload nginx || true
+              fi
+              exit 1
+            fi
           "
 
-      # ---------- Prune ----------
+      # ── Prune even if nothing changed is fine ─────────────────────────────────
       - name: Prune old releases (keep last 10)
         if: ${{ always() }}
         env:
@@ -196,9 +253,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
         run: |
-          ssh "$SSH_USER@$SSH_HOST" "cd '$VPS_BASE/releases' && ls -1dt * | tail -n +11 | xargs -r rm -rf"
+          ssh "$SSH_USER@$SSH_HOST" "cd '$VPS_BASE/releases' && ls -1dt * 2>/dev/null | tail -n +11 | xargs -r rm -rf"
 
-      # ---------- Diagnostics on failure ----------
       - name: Gather logs on failure
         if: ${{ failure() }}
         env:
@@ -217,5 +273,5 @@ jobs:
 
       - name: Summary
         if: ${{ success() }}
-        run: echo "✅ Deployed release ${{ steps.ts.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
-
+        run: |
+          echo "✅ Deploy complete. Frontend changed: ${{ steps.changes.outputs.frontend }}, Backend changed: ${{ steps.changes.outputs.backend }}, Infra changed: ${{ steps.changes.outputs.infra }}" >> "$GITHUB_STEP_SUMMARY"

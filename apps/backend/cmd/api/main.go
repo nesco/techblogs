@@ -32,7 +32,7 @@ func getListener(addr string) (net.Listener, error) {
 			return nil, fmt.Errorf("listen unix %s: %w", sock, err)
 		}
 
-		// Make sure nginx/app user can read/write
+		// Make sure nginx can read/write
 		if err := os.Chmod(sock, 0o660); err != nil {
 			_ = ln.Close()
 			return nil, fmt.Errorf("chmod %s: %w", sock, err)

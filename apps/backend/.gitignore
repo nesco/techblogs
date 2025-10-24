@@ -1,5 +1,8 @@
 # Files
 !.gitignore
-!main.go
 !go.mod
 !go.sum
+
+# Folders
+!cmd
+!internal

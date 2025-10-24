@@ -24,10 +24,10 @@ jobs:
       - name: Build backend (Linux amd64)
         working-directory: apps/backend
         run: |
-          mkdir -p build
+          mkdir -p bin
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-            go build -ldflags="-s -w" -o build/techblogs-backend
-          file build/techblogs-backend
+            go build -ldflags="-s -w" -o bin/techblogs-api ./cmd/api
+          file bin/techblogs-api
 
       # ── Artifacts (split) ───────────────────────────────────────────────────────
       - name: Upload frontend artifact
@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: techblogs-backend
-          path: apps/backend/build/techblogs-backend
+          path: apps/backend/bin/techblogs-api
           retention-days: 1
           if-no-files-found: error
 
@@ -104,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           rsync -avz infra/nginx.conf "$SSH_USER@$SSH_HOST:/tmp/techblogs.nginx.conf"
-          rsync -avz infra/techblogs-backend.service "$SSH_USER@$SSH_HOST:/tmp/techblogs-backend.service"
+          rsync -avz infra/techblogs-api.service "$SSH_USER@$SSH_HOST:/tmp/techblogs-api.service"
           ssh "$SSH_USER@$SSH_HOST" '
             set -euo pipefail
             need_reload=0
@@ -118,8 +118,8 @@ jobs:
             fi
 
             # systemd unit
-            if ! cmp -s /tmp/techblogs-backend.service /etc/systemd/system/techblogs-backend.service; then
-              sudo install -m 644 /tmp/techblogs-backend.service /etc/systemd/system/techblogs-backend.service
+            if ! cmp -s /tmp/techblogs-api.service /etc/systemd/system/techblogs-api.service; then
+              sudo install -m 644 /tmp/techblogs-api.service /etc/systemd/system/techblogs-api.service
               sudo systemctl daemon-reload
               need_restart=1
             fi
@@ -129,8 +129,8 @@ jobs:
               sudo systemctl reload nginx
             fi
             if [ "$need_restart" -eq 1 ]; then
-              sudo systemctl enable techblogs-backend
-              sudo systemctl restart techblogs-backend
+              sudo systemctl enable techblogs-api
+              sudo systemctl restart techblogs-api
             fi
 
             echo "Infra update complete (reload=$need_reload, restart=$need_restart)"
@@ -160,7 +160,7 @@ jobs:
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
           rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
-          rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/techblogs-backend "$SSH_USER@$SSH_HOST:$REL/backend/"
+          rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/techblogs-api "$SSH_USER@$SSH_HOST:$REL/backend/"
 
       # ── Ownership & perms (only if we shipped anything) ───────────────────────
       - name: Fix ownership & perms
@@ -203,7 +203,7 @@ jobs:
             ln -sfn '$REL' '$VPS_BASE/current'
 
             if [ '$BACKEND_CHANGED' = 'true' ]; then
-              systemctl restart techblogs-backend
+              systemctl restart techblogs-api
             fi
 
             if [ '$FRONTEND_CHANGED' = 'true' ] || [ '$BACKEND_CHANGED' = 'true' ]; then
@@ -224,7 +224,7 @@ jobs:
               PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
               if [ -n \"\$PREV\" ]; then
                 ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
-                systemctl restart techblogs-backend || true
+                systemctl restart techblogs-api || true
                 systemctl reload nginx || true
               fi
               exit 1
@@ -249,10 +249,10 @@ jobs:
         run: |
           set -euo pipefail
           ssh "$SSH_USER@$SSH_HOST" '
-            echo "=== systemd status techblogs-backend ==="
-            sudo systemctl status --no-pager techblogs-backend || true
+            echo "=== systemd status techblogs-api ==="
+            sudo systemctl status --no-pager techblogs-api || true
             echo "=== last 200 journal lines ==="
-            sudo journalctl -u techblogs-backend -n 200 --no-pager || true
+            sudo journalctl -u techblogs-api -n 200 --no-pager || true
             echo "=== nginx config test ==="
             sudo nginx -t || true
           ' | sed -e "s/\x1b\[[0-9;]*m//g"

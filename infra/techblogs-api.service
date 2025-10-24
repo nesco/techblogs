@@ -8,7 +8,7 @@ After=network-online.target
 User=techblogs
 Group=www-data
 Environment=LISTEN_ADDR=unix:/run/techblogs-api/techblogs-api.sock
-ExecStart=/srv/techblogs/current/backend/techblogs-backend
+ExecStart=/srv/techblogs/current/backend/techblogs-api
 RuntimeDirectory=techblogs-api
 RuntimeDirectoryMode=0755
 UMask=0007

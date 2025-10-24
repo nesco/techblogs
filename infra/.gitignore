@@ -2,4 +2,4 @@
 !.gitignore
 !README.md
 !nginx.conf
-!techblogs-backend.service
+!techblogs-api.service

@@ -6,10 +6,10 @@ import (
 )
 
 func registerRoutes(mux *http.ServeMux, startTime time.Time) {
-	healtAPI := NewHealthAPI(startTime)
+	healthAPI := NewHealthAPI(startTime)
 	blogsAPI := NewBlogsAPI()
 
-	mux.HandleFunc("GET /health", healtAPI.Read)
+	mux.HandleFunc("GET /health", healthAPI.Read)
 	mux.HandleFunc("GET /blogs", blogsAPI.Read)
 	mux.HandleFunc("GET /blogs/{collection}", blogsAPI.Read)
 }

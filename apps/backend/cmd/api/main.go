@@ -51,7 +51,10 @@ func getListener(addr string) (net.Listener, error) {
 func main() {
 	startTime := time.Now()
 
-	logger, _ := zap.NewProduction()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(fmt.Sprintf("failed to initialize logger: %v", err))
+	}
 	defer logger.Sync()
 
 	sugar := logger.Sugar()
@@ -69,6 +72,7 @@ func main() {
 		sugar.Fatal(err)
 	}
 
-	http.Serve(ln, mux)
+	err = http.Serve(ln, mux)
+	sugar.Fatalw("Server stopped", "error", err)
 
 }

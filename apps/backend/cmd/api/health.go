@@ -10,6 +10,12 @@ type HealthAPI struct {
 	startTime time.Time
 }
 
+type HealthResponse struct {
+	Status    string  `json:"status"`
+	Timestamp string  `json:"timestamp"`
+	UptimeS   float64 `json:"uptime_s"`
+}
+
 func NewHealthAPI(startTime time.Time) *HealthAPI {
 	return &HealthAPI{
 		startTime,
@@ -17,10 +23,13 @@ func NewHealthAPI(startTime time.Time) *HealthAPI {
 }
 
 func (a *HealthAPI) Read(w http.ResponseWriter, r *http.Request) {
-	resp := map[string]any{
-		"status":    "ok",
-		"timestamp": time.Now().UTC().UTC().Format(time.RFC3339),
-		"uptime_s":  time.Since(a.startTime).Seconds(),
+	resp := HealthResponse{
+		Status:    "ok",
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		UptimeS:   time.Since(a.startTime).Seconds(),
 	}
-	json.NewEncoder(w).Encode(resp)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }

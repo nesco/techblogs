@@ -11,5 +11,5 @@ func registerRoutes(mux *http.ServeMux, startTime time.Time) {
 
 	mux.HandleFunc("GET /health", healtAPI.Read)
 	mux.HandleFunc("GET /blogs", blogsAPI.Read)
-	mux.HandleFunc("GET /blogs/{kind}", blogsAPI.Read)
+	mux.HandleFunc("GET /blogs/{collection}", blogsAPI.Read)
 }

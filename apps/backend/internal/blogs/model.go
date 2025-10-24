@@ -4,8 +4,13 @@ type Kind string
 
 const (
 	Person       Kind = "person"
-	Organization Kind = "Organization"
+	Organization Kind = "organization"
 )
+
+var KindByCollection = map[string]Kind{
+	"people":        Person,
+	"organizations": Organization,
+}
 
 type BlogInfo struct {
 	BlogHref          string `json:"blogHref"`

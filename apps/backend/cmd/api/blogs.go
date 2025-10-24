@@ -72,7 +72,7 @@ func NewBlogsAPI() *BlogsAPI {
 }
 
 func (a *BlogsAPI) Read(w http.ResponseWriter, r *http.Request) {
-	kind := blogs.Kind(r.PathValue("kind"))
+	kind := blogs.KindByCollection[r.PathValue("collection")]
 	var items []blogs.BlogInfo
 	for _, blog := range a.blogsRepository {
 		if blog.Kind == kind || kind == "" {

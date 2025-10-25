@@ -16,7 +16,9 @@ var blogEntriesTemplate = template.Must(template.New("BlogEntries").Parse(`
 	{{- range . -}}
 	<article class="card">
 	 <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
-		<p>Latest: <a href="{{ .LatestArticleHref }}">{{ .LatestArticleName }}</a></p>
+		{{- if .LatestArticleHref }}
+		<p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+		{{- end }}
 	</article>
 	{{- end -}}
 `))
@@ -78,7 +80,7 @@ func (a *BlogsAPI) Read(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Type", "text/html; charset: utf-8")
 		io.WriteString(w, htmlContent)
 		return
 	}

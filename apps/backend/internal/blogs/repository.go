@@ -77,7 +77,7 @@ func (r *Repository) GetBlogsByKind(kind Kind) ([]BlogInfo, error) {
 
 func (r *Repository) GetAllBlogConfigs() ([]BlogConfig, error) {
 	query := `
-		SELECT blog_name, blog_href, kind, article_selector
+		SELECT blog_name, blog_href, kind, article_href_selector, article_name_selector
 		FROM blog_configs
 		ORDER BY blog_name
 	`
@@ -91,7 +91,7 @@ func (r *Repository) GetAllBlogConfigs() ([]BlogConfig, error) {
 	for rows.Next() {
 		var config BlogConfig
 		var kind string
-		if err := rows.Scan(&config.BlogName, &config.BlogHref, &kind, &config.ArticleSelector); err != nil {
+		if err := rows.Scan(&config.BlogName, &config.BlogHref, &kind, &config.ArticleHrefSelector, &config.ArticleNameSelector); err != nil {
 			return nil, fmt.Errorf("failed to scan blog config row: %w", err)
 		}
 		config.Kind = Kind(kind)

@@ -4,12 +4,12 @@ package blogs
 type Kind string
 
 const (
-	Person       Kind = "person"
+	Individual   Kind = "individual"
 	Organization Kind = "organization"
 )
 
 var KindByCollection = map[string]Kind{
-	"people":        Person,
+	"people":        Individual,
 	"organizations": Organization,
 }
 
@@ -22,8 +22,9 @@ type BlogInfo struct {
 }
 
 type BlogConfig struct {
-	BlogName        string
-	BlogHref        string
-	Kind            Kind
-	ArticleSelector string
+	BlogName            string
+	BlogHref            string
+	Kind                Kind
+	ArticleHrefSelector string
+	ArticleNameSelector string
 }

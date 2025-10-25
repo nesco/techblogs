@@ -191,9 +191,11 @@ jobs:
             mkdir -p ./data
             if [ ! -f ./data/techblogs.db ]; then
               touch ./data/techblogs.db
-              sudo chown techblogs:www-data ./data/techblogs.db
-              sudo chmod 664 ./data/techblogs.db
             fi
+            # Ensure proper ownership and permissions (always, in case they got reset)
+            sudo chown techblogs:www-data ./data ./data/techblogs.db
+            sudo chmod 775 ./data
+            sudo chmod 664 ./data/techblogs.db
             migrate -path ./migrations -database 'sqlite3://./data/techblogs.db' up
             echo 'Migrations completed successfully'
           "

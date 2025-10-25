@@ -78,4 +78,27 @@ Managed via GitHub Actions (`.github/workflows/deploy.yml`):
    ```bash
    sudo mkdir -p /srv/techblogs/{releases,data,migrations}
    sudo chown -R techblogs:www-data /srv/techblogs
+   sudo chmod 775 /srv/techblogs/data
+   ```
+
+## Post-Deployment
+
+After the first deployment completes successfully:
+
+1. **Run the scraper manually** to populate the blog cache:
+   ```bash
+   sudo systemctl start techblogs-scraper
+   sudo systemctl status techblogs-scraper
+   sudo journalctl -u techblogs-scraper -n 50
+   ```
+
+2. **Verify the timer is enabled** for daily runs:
+   ```bash
+   sudo systemctl status techblogs-scraper.timer
+   sudo systemctl list-timers | grep techblogs
+   ```
+
+3. **Check API health**:
+   ```bash
+   curl --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health
    ```

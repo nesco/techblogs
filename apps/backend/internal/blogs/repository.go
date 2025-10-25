@@ -18,7 +18,7 @@ func (r *Repository) GetAllBlogs() ([]BlogInfo, error) {
 	query := `
 		SELECT blog_name, blog_href, latest_article_name, latest_article_href, kind
 		FROM blog_cache
-		ORDER BY updated_at DESC, blog_name ASC
+		ORDER BY DATE(updated_at) DESC, blog_name ASC
 	`
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -49,7 +49,7 @@ func (r *Repository) GetBlogsByKind(kind Kind) ([]BlogInfo, error) {
 		SELECT blog_name, blog_href, latest_article_name, latest_article_href, kind
 		FROM blog_cache
 		WHERE kind = ?
-		ORDER BY updated_at DESC, blog_name ASC
+		ORDER BY DATE(updated_at) DESC, blog_name ASC
 	`
 	rows, err := r.db.Query(query, string(kind))
 	if err != nil {

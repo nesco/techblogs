@@ -8,6 +8,7 @@ After=network-online.target
 User=techblogs
 Group=www-data
 Environment=LISTEN_ADDR=unix:/run/techblogs-api/techblogs-api.sock
+Environment=DB_PATH=/srv/techblogs/data/techblogs.db
 ExecStart=/srv/techblogs/current/backend/techblogs-api
 RuntimeDirectory=techblogs-api
 RuntimeDirectoryMode=0755
@@ -19,7 +20,7 @@ RestartSec=2s
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/run/techblogs-api
+ReadWritePaths=/run/techblogs-api /srv/techblogs/data
 PrivateTmp=true
 RestrictAddressFamilies=AF_UNIX
 CapabilityBoundingSet=

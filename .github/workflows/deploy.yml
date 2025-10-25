@@ -188,6 +188,12 @@ jobs:
           rsync -avz --delete apps/backend/migrations/ "$SSH_USER@$SSH_HOST:$VPS_BASE/migrations/"
           ssh "$SSH_USER@$SSH_HOST" "set -euo pipefail
             cd $VPS_BASE
+            mkdir -p ./data
+            if [ ! -f ./data/techblogs.db ]; then
+              touch ./data/techblogs.db
+              sudo chown techblogs:www-data ./data/techblogs.db
+              sudo chmod 664 ./data/techblogs.db
+            fi
             migrate -path ./migrations -database 'sqlite3://./data/techblogs.db' up
             echo 'Migrations completed successfully'
           "

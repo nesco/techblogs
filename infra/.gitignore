@@ -1,5 +1,7 @@
 # Files
 !.gitignore
+!.gitkeep
+
 !README.md
 !nginx.conf
 !techblogs-api.service

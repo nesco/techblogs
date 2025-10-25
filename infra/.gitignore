@@ -3,3 +3,5 @@
 !README.md
 !nginx.conf
 !techblogs-api.service
+!techblogs-scraper.service
+!techblogs-scraper.timer

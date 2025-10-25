@@ -78,6 +78,8 @@ jobs:
               - 'apps/frontend/**'
             backend:
               - 'apps/backend/**'
+            migrations:
+              - 'apps/backend/migrations/**'
 
       - name: Create timestamp
         id: ts
@@ -115,10 +117,13 @@ jobs:
           set -euo pipefail
           rsync -avz infra/nginx.conf "$SSH_USER@$SSH_HOST:/tmp/techblogs.nginx.conf"
           rsync -avz infra/techblogs-api.service "$SSH_USER@$SSH_HOST:/tmp/techblogs-api.service"
+          rsync -avz infra/techblogs-scraper.service "$SSH_USER@$SSH_HOST:/tmp/techblogs-scraper.service"
+          rsync -avz infra/techblogs-scraper.timer "$SSH_USER@$SSH_HOST:/tmp/techblogs-scraper.timer"
           ssh "$SSH_USER@$SSH_HOST" '
             set -euo pipefail
             need_reload=0
-            need_restart=0
+            need_restart_api=0
+            need_reload_timer=0
 
             # Nginx config
             if ! cmp -s /tmp/techblogs.nginx.conf /etc/nginx/sites-available/techblo.gs; then
@@ -127,24 +132,58 @@ jobs:
               sudo ln -sfn /etc/nginx/sites-available/techblo.gs /etc/nginx/sites-enabled/techblo.gs
             fi
 
-            # systemd unit
+            # API systemd unit
             if ! cmp -s /tmp/techblogs-api.service /etc/systemd/system/techblogs-api.service; then
               sudo install -m 644 /tmp/techblogs-api.service /etc/systemd/system/techblogs-api.service
               sudo systemctl daemon-reload
-              need_restart=1
+              need_restart_api=1
+            fi
+
+            # Scraper systemd unit
+            if ! cmp -s /tmp/techblogs-scraper.service /etc/systemd/system/techblogs-scraper.service; then
+              sudo install -m 644 /tmp/techblogs-scraper.service /etc/systemd/system/techblogs-scraper.service
+              sudo systemctl daemon-reload
+              need_reload_timer=1
+            fi
+
+            # Scraper timer
+            if ! cmp -s /tmp/techblogs-scraper.timer /etc/systemd/system/techblogs-scraper.timer; then
+              sudo install -m 644 /tmp/techblogs-scraper.timer /etc/systemd/system/techblogs-scraper.timer
+              sudo systemctl daemon-reload
+              need_reload_timer=1
             fi
 
             if [ "$need_reload" -eq 1 ]; then
               sudo nginx -t
               sudo systemctl reload nginx
             fi
-            if [ "$need_restart" -eq 1 ]; then
+            if [ "$need_restart_api" -eq 1 ]; then
               sudo systemctl enable techblogs-api
               sudo systemctl restart techblogs-api
             fi
+            if [ "$need_reload_timer" -eq 1 ]; then
+              sudo systemctl enable techblogs-scraper.timer
+              sudo systemctl restart techblogs-scraper.timer
+            fi
 
-            echo "Infra update complete (reload=$need_reload, restart=$need_restart)"
+            echo "Infra update complete (reload=$need_reload, restart_api=$need_restart_api, reload_timer=$need_reload_timer)"
           '
+
+      # ── Run migrations (before deploying new code) ─────────────────────────────
+      - name: Run database migrations
+        if: steps.changes.outputs.migrations == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
+        run: |
+          set -euo pipefail
+          rsync -avz --delete apps/backend/migrations/ "$SSH_USER@$SSH_HOST:$VPS_BASE/migrations/"
+          ssh "$SSH_USER@$SSH_HOST" "set -euo pipefail
+            cd $VPS_BASE
+            migrate -path ./migrations -database 'sqlite3://./data/techblogs.db' up
+            echo 'Migrations completed successfully'
+          "
 
       # ── Rsync release only when something to deploy ────────────────────────────
       - name: Prepare release dir
@@ -270,4 +309,4 @@ jobs:
       - name: Summary
         if: ${{ success() }}
         run: |
-          echo "✅ Deploy complete. Frontend changed: ${{ steps.changes.outputs.frontend }}, Backend changed: ${{ steps.changes.outputs.backend }}, Infra changed: ${{ steps.changes.outputs.infra }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Deploy complete. Frontend: ${{ steps.changes.outputs.frontend }}, Backend: ${{ steps.changes.outputs.backend }}, Migrations: ${{ steps.changes.outputs.migrations }}, Infra: ${{ steps.changes.outputs.infra }}" >> "$GITHUB_STEP_SUMMARY"

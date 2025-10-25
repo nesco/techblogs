@@ -18,7 +18,7 @@ func (r *Repository) GetAllBlogs() ([]BlogInfo, error) {
 	query := `
 		SELECT blog_name, blog_href, latest_article_name, latest_article_href, kind
 		FROM blog_cache
-		ORDER BY blog_name
+		ORDER BY updated_at DESC, blog_name ASC
 	`
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -49,7 +49,7 @@ func (r *Repository) GetBlogsByKind(kind Kind) ([]BlogInfo, error) {
 		SELECT blog_name, blog_href, latest_article_name, latest_article_href, kind
 		FROM blog_cache
 		WHERE kind = ?
-		ORDER BY blog_name
+		ORDER BY updated_at DESC, blog_name ASC
 	`
 	rows, err := r.db.Query(query, string(kind))
 	if err != nil {
@@ -105,7 +105,44 @@ func (r *Repository) GetAllBlogConfigs() ([]BlogConfig, error) {
 	return configs, nil
 }
 
+func (r *Repository) GetBlogCache(blogName string) (*BlogInfo, error) {
+	query := `
+		SELECT blog_name, blog_href, latest_article_name, latest_article_href, kind
+		FROM blog_cache
+		WHERE blog_name = ?
+	`
+	var blog BlogInfo
+	var kind string
+	err := r.db.QueryRow(query, blogName).Scan(&blog.BlogName, &blog.BlogHref, &blog.LatestArticleName, &blog.LatestArticleHref, &kind)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get blog cache: %w", err)
+	}
+	blog.Kind = Kind(kind)
+	return &blog, nil
+}
+
 func (r *Repository) UpsertBlogCache(blog BlogInfo) error {
+	// Check if data has changed
+	existing, err := r.GetBlogCache(blog.BlogName)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+
+	// If exists and data is the same, don't update updated_at
+	if existing != nil &&
+		existing.BlogHref == blog.BlogHref &&
+		existing.LatestArticleName == blog.LatestArticleName &&
+		existing.LatestArticleHref == blog.LatestArticleHref &&
+		existing.Kind == blog.Kind {
+		// No changes, don't update
+		return nil
+	}
+
 	query := `
 		INSERT INTO blog_cache (blog_name, blog_href, latest_article_name, latest_article_href, kind, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -116,7 +153,7 @@ func (r *Repository) UpsertBlogCache(blog BlogInfo) error {
 			kind = excluded.kind,
 			updated_at = excluded.updated_at
 	`
-	_, err := r.db.Exec(query, blog.BlogName, blog.BlogHref, blog.LatestArticleName, blog.LatestArticleHref, string(blog.Kind), time.Now())
+	_, err = r.db.Exec(query, blog.BlogName, blog.BlogHref, blog.LatestArticleName, blog.LatestArticleHref, string(blog.Kind), now)
 	if err != nil {
 		return fmt.Errorf("failed to upsert blog cache: %w", err)
 	}

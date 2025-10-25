@@ -57,7 +57,7 @@ header {
 main {
   max-width: var(--max-width);
   margin: var(--spacing-lg) auto;
-  padding: 0 var(--spacing-sm);
+  padding: 0 var(--spacing-sm) 5rem var(--spacing-sm);
 
 }
 

@@ -4,6 +4,17 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      force_migrations:
+        description: 'Force run migrations'
+        required: false
+        type: boolean
+        default: false
+      force_infra:
+        description: 'Force update infrastructure'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-techblogs
@@ -74,10 +85,6 @@ jobs:
           filters: |
             infra:
               - 'infra/**'
-            frontend:
-              - 'apps/frontend/**'
-            backend:
-              - 'apps/backend/**'
             migrations:
               - 'apps/backend/migrations/**'
 
@@ -109,7 +116,7 @@ jobs:
 
       # ── OPTIONAL: update infra only when infra/** changed ──────────────────────
       - name: Update infra on VPS (only if infra changed)
-        if: steps.changes.outputs.infra == 'true'
+        if: steps.changes.outputs.infra == 'true' || github.event.inputs.force_infra == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -171,7 +178,7 @@ jobs:
 
       # ── Run migrations (before deploying new code) ─────────────────────────────
       - name: Run database migrations
-        if: steps.changes.outputs.migrations == 'true'
+        if: steps.changes.outputs.migrations == 'true' || github.event.inputs.force_migrations == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -185,9 +192,8 @@ jobs:
             echo 'Migrations completed successfully'
           "
 
-      # ── Rsync release only when something to deploy ────────────────────────────
+      # ── Deploy frontend + backend (always) ────────────────────────────────────
       - name: Prepare release dir
-        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -199,7 +205,6 @@ jobs:
           ssh "$SSH_USER@$SSH_HOST" "mkdir -p \"$REL/frontend\" \"$REL/backend\""
 
       - name: Rsync frontend + backend
-        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -211,9 +216,8 @@ jobs:
           rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
           rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/ "$SSH_USER@$SSH_HOST:$REL/backend/"
 
-      # ── Ownership & perms (only if we shipped anything) ───────────────────────
+      # ── Ownership & perms ──────────────────────────────────────────────────────
       - name: Fix ownership & perms
-        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -233,16 +237,13 @@ jobs:
             fi
           "
 
-      # ── Activate + health checks (only if we shipped anything) ────────────────
-      - name: Activate, (maybe) restart & health-check (with rollback)
-        if: ${{ steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true' }}
+      # ── Activate + health checks ───────────────────────────────────────────────
+      - name: Activate, restart & health-check (with rollback)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           VPS_BASE: ${{ secrets.VPS_BASE || '/srv/techblogs' }}
           TS: ${{ steps.ts.outputs.value }}
-          FRONTEND_CHANGED: ${{ steps.changes.outputs.frontend }}
-          BACKEND_CHANGED:  ${{ steps.changes.outputs.backend }}
         run: |
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
@@ -251,33 +252,27 @@ jobs:
             # Activate new release
             ln -sfn '$REL' '$VPS_BASE/current'
 
-            if [ '$BACKEND_CHANGED' = 'true' ]; then
-              systemctl restart techblogs-api
-            fi
+            # Always restart backend and reload nginx
+            systemctl restart techblogs-api
+            nginx -t && systemctl reload nginx || true
 
-            if [ '$FRONTEND_CHANGED' = 'true' ] || [ '$BACKEND_CHANGED' = 'true' ]; then
-              nginx -t && systemctl reload nginx || true
-            fi
-
-            if [ '$BACKEND_CHANGED' = 'true' ]; then
-              # Socket-level health check of backend
-              for i in {1..30}; do
-                if curl --fail --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health >/dev/null 2>&1; then
-                  echo 'Health check PASSED'
-                  exit 0
-                fi
-                sleep 1
-              done
-
-              echo 'Health check FAILED — rolling back to previous release' >&2
-              PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
-              if [ -n \"\$PREV\" ]; then
-                ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
-                systemctl restart techblogs-api || true
-                systemctl reload nginx || true
+            # Socket-level health check of backend
+            for i in {1..30}; do
+              if curl --fail --unix-socket /run/techblogs-api/techblogs-api.sock http://localhost/health >/dev/null 2>&1; then
+                echo 'Health check PASSED'
+                exit 0
               fi
-              exit 1
+              sleep 1
+            done
+
+            echo 'Health check FAILED — rolling back to previous release' >&2
+            PREV=\$(ls -1dt $VPS_BASE/releases/* | sed -n '2p' || true)
+            if [ -n \"\$PREV\" ]; then
+              ln -sfn \"\$PREV\" \"$VPS_BASE/current\"
+              systemctl restart techblogs-api || true
+              systemctl reload nginx || true
             fi
+            exit 1
           "
 
       # ── Prune even if nothing changed is fine ─────────────────────────────────
@@ -309,4 +304,4 @@ jobs:
       - name: Summary
         if: ${{ success() }}
         run: |
-          echo "✅ Deploy complete. Frontend: ${{ steps.changes.outputs.frontend }}, Backend: ${{ steps.changes.outputs.backend }}, Migrations: ${{ steps.changes.outputs.migrations }}, Infra: ${{ steps.changes.outputs.infra }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Deploy complete. Migrations: ${{ steps.changes.outputs.migrations }}, Infra: ${{ steps.changes.outputs.infra }}" >> "$GITHUB_STEP_SUMMARY"

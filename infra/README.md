@@ -57,10 +57,14 @@ Managed via GitHub Actions (`.github/workflows/deploy.yml`):
 
 ## One-time VPS Setup
 
-1. Install `golang-migrate`:
+1. Install `golang-migrate` with SQLite support:
    ```bash
-   curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
-   sudo mv migrate /usr/local/bin/
+   # Install Go if not already installed
+   # sudo apt install golang-go
+
+   # Install migrate with sqlite3 support
+   go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+   sudo mv ~/go/bin/migrate /usr/local/bin/migrate
    sudo chmod +x /usr/local/bin/migrate
    ```
 

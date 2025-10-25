@@ -1,13 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
+
+	"github.com/nesco/techblogs/backend/internal/blogs"
 )
 
-func registerRoutes(mux *http.ServeMux, startTime time.Time) {
+func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB) {
 	healthAPI := NewHealthAPI(startTime)
-	blogsAPI := NewBlogsAPI()
+	blogsRepo := blogs.NewRepository(db)
+	blogsAPI := NewBlogsAPI(blogsRepo)
 
 	mux.HandleFunc("GET /health", healthAPI.Read)
 	mux.HandleFunc("GET /blogs", blogsAPI.Read)

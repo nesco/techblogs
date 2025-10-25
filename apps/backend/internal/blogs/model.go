@@ -1,3 +1,4 @@
+// Package blogs provides domain models and data access for tech blog management.
 package blogs
 
 type Kind string
@@ -18,4 +19,11 @@ type BlogInfo struct {
 	LatestArticleHref string `json:"latestArticleHref"`
 	LatestArticleName string `json:"latestArticleName"`
 	Kind              Kind   `json:"kind"`
+}
+
+type BlogConfig struct {
+	BlogName        string
+	BlogHref        string
+	Kind            Kind
+	ArticleSelector string
 }

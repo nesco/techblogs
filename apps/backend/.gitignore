@@ -6,3 +6,5 @@
 # Folders
 !cmd
 !internal
+!migrations
+!data

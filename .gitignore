@@ -2,6 +2,7 @@
 
 # Files
 !.gitignore
+!.sqlfluff
 
 # Folders
 !.github/

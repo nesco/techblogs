@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -9,11 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nesco/techblogs/backend/internal/database"
 	"go.uber.org/zap"
 )
 
 func getListener(addr string) (net.Listener, error) {
-
 	if addr == "" {
 		addr = "127.0.0.1:5011"
 	}
@@ -60,19 +61,30 @@ func main() {
 	sugar := logger.Sugar()
 	sugar.Infow("Techblogs backend started")
 
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./data/techblogs.db"
+	}
+
+	db, err := database.InitDB(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+
+	sugar.Infow("Database initialized", "path", dbPath)
+
 	// Setting-up the HTTP Server
 	mux := http.NewServeMux()
 
-	registerRoutes(mux, startTime)
+	registerRoutes(mux, startTime, db)
 
 	addr := os.Getenv("LISTEN_ADDR")
 	ln, err := getListener(addr)
-
 	if err != nil {
 		sugar.Fatal(err)
 	}
 
 	err = http.Serve(ln, mux)
 	sugar.Fatalw("Server stopped", "error", err)
-
 }

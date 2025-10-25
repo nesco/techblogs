@@ -21,13 +21,23 @@ jobs:
           go-version-file: 'apps/backend/go.mod'
           cache: true
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-x86-64-linux-gnu libsqlite3-dev
+
       - name: Build backend (Linux amd64)
         working-directory: apps/backend
+        env:
+          CC: x86_64-linux-gnu-gcc
         run: |
           mkdir -p bin
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 \
             go build -ldflags="-s -w" -o bin/techblogs-api ./cmd/api
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 \
+            go build -ldflags="-s -w" -o bin/techblogs-scraper ./cmd/scraper
           file bin/techblogs-api
+          file bin/techblogs-scraper
 
       # ── Artifacts (split) ───────────────────────────────────────────────────────
       - name: Upload frontend artifact
@@ -42,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: techblogs-backend
-          path: apps/backend/bin/techblogs-api
+          path: apps/backend/bin/
           retention-days: 1
           if-no-files-found: error
 
@@ -160,7 +170,7 @@ jobs:
           set -euo pipefail
           REL="$VPS_BASE/releases/$TS"
           rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX ./artifacts/frontend/ "$SSH_USER@$SSH_HOST:$REL/frontend/"
-          rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/techblogs-api "$SSH_USER@$SSH_HOST:$REL/backend/"
+          rsync -az --chmod=Fu=rwx,Fgo=rx ./artifacts/backend/ "$SSH_USER@$SSH_HOST:$REL/backend/"
 
       # ── Ownership & perms (only if we shipped anything) ───────────────────────
       - name: Fix ownership & perms

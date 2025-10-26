@@ -1,0 +1,8 @@
+{{- range . -}}
+<article class="card">
+ <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+	{{- if .LatestArticleHref }}
+	<p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+	{{- end }}
+</article>
+{{- end -}}

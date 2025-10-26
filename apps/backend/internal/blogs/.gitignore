@@ -1,3 +1,7 @@
 # Files
 !model.go
 !repository.go
+!templates.go
+
+# Folder
+!templates/

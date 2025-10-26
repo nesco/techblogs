@@ -15,5 +15,6 @@ func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB) {
 
 	mux.HandleFunc("GET /health", healthAPI.Read)
 	mux.HandleFunc("GET /blogs", blogsAPI.Read)
+	mux.HandleFunc("GET /blogs/rss.xml", blogsAPI.RSS)
 	mux.HandleFunc("GET /blogs/{collection}", blogsAPI.Read)
 }

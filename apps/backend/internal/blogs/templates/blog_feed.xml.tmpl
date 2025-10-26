@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+<title>Techblo.gs Aggregator</title>
+<link>https://techblo.gs</link>
+<description>Aggregator of manually chosen tech blogs</description>
+<language>en</language>
+{{- range . -}}
+<item>
+  <title>{{ .BlogName }} : {{ .LatestArticleName }}</title>
+  <link>{{ .LatestArticleHref }}</link>
+  <description>Latest article of {{ .BlogName }}</description>
+  <guid>{{ .LatestArticleHref }}</guid>
+</item>
+{{- end -}}
+</channel>
+</rss>

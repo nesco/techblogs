@@ -6,12 +6,14 @@
 <description>Aggregator of manually chosen tech blogs</description>
 <language>en</language>
 {{- range . -}}
+{{- if .LatestArticleHref -}}
 <item>
   <title>{{ .BlogName }} : {{ .LatestArticleName }}</title>
   <link>{{ .LatestArticleHref }}</link>
   <description>Latest article of {{ .BlogName }}</description>
   <guid>{{ .LatestArticleHref }}</guid>
 </item>
+{{- end -}}
 {{- end -}}
 </channel>
 </rss>

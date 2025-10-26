@@ -42,7 +42,7 @@ func encodeBlogsJSON(w http.ResponseWriter, items []blogs.BlogInfo) {
 func encodeBlogsHTML(w http.ResponseWriter, items []blogs.BlogInfo) {
 	content, err := blogsDataToCards(items)
 	if err != nil {
-		http.Error(w, "Inernal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

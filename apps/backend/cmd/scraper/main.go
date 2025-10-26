@@ -1,3 +1,4 @@
+// Command to scrape the latest articles from blogs
 package main
 
 import (
@@ -129,23 +130,6 @@ func scrapeBlog(config blogs.BlogConfig) (articleName string, articleHref string
 	}
 
 	return articleName, articleHref, nil
-}
-
-func extractTextFromFirstLeaf(sel *goquery.Selection) string {
-	children := sel.Children()
-
-	if children.Length() == 0 {
-		return strings.TrimSpace(sel.Text())
-	}
-
-	// Try each child until we find one with text
-	var result string
-	children.EachWithBreak(func(i int, child *goquery.Selection) bool {
-		result = extractTextFromFirstLeaf(child)
-		return result == ""
-	})
-
-	return result
 }
 
 func normalizeURL(baseURL, path string) string {

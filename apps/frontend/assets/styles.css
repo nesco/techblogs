@@ -102,11 +102,6 @@ main {
 
 .sections-container {
   display: flex;
-  flex-direction: column;
-}
-
-.sections-container {
-  display: flex;
   flex-direction: row;
   gap: 5%;
   justify-content: space-around;

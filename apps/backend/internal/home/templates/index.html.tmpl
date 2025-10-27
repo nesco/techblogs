@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="assets/styles.css">
+  <title>Tech Blogs</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
+</head>
+
+<body>
+  <header>
+    <h1>Tech Blogs</h1>
+  </header>
+
+  <main class="sections-container">
+    <section>
+      <h2>People</h2>
+      <div class="cards-container" hx-get="/api/blogs/people" hx-trigger="load">
+      </div>
+    </section>
+    <section>
+      <h2>Organizations</h2>
+      <div class="cards-container" hx-get="/api/blogs/organizations" hx-trigger="load">
+      </div>
+    </section>
+
+  </main>
+
+
+  <footer>
+    <p>Tech blog aggregator by <a href="mailto:emmanuel@federbusch.fr">Emmanuel Federbusch</a> | <a href="/api/blogs/rss.xml">RSS Feed</a></p>
+  </footer>
+
+</body>
+
+</html>
+

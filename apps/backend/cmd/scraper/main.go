@@ -1,4 +1,3 @@
-// Command to scrape the latest articles from blogs
 package main
 
 import (

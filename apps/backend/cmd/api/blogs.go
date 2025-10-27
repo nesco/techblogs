@@ -11,11 +11,11 @@ import (
 	"github.com/nesco/techblogs/backend/internal/blogs"
 )
 
-type BlogsAPI struct {
+type BlogsHandler struct {
 	repo *blogs.Repository
 }
 
-func blogsDataToCards(items []blogs.BlogInfo) (string, error) {
+func renderBlogCards(items []blogs.BlogInfo) (string, error) {
 	var buffer bytes.Buffer
 	if err := blogs.BlogListTemplate.Execute(&buffer, items); err != nil {
 		return "", fmt.Errorf("error parsing blog entries: %w", err)
@@ -23,7 +23,7 @@ func blogsDataToCards(items []blogs.BlogInfo) (string, error) {
 	return buffer.String(), nil
 }
 
-func blogsDataToFeed(items []blogs.BlogInfo) (string, error) {
+func renderBlogFeed(items []blogs.BlogInfo) (string, error) {
 	var buffer bytes.Buffer
 	if err := blogs.BlogFeedTemplate.Execute(&buffer, items); err != nil {
 		return "", fmt.Errorf("error parsing blog entries: %w", err)
@@ -40,7 +40,7 @@ func encodeBlogsJSON(w http.ResponseWriter, items []blogs.BlogInfo) {
 }
 
 func encodeBlogsHTML(w http.ResponseWriter, items []blogs.BlogInfo) {
-	content, err := blogsDataToCards(items)
+	content, err := renderBlogCards(items)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -50,7 +50,7 @@ func encodeBlogsHTML(w http.ResponseWriter, items []blogs.BlogInfo) {
 }
 
 func encodeBlogsRSS(w http.ResponseWriter, items []blogs.BlogInfo) {
-	content, err := blogsDataToFeed(items)
+	content, err := renderBlogFeed(items)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -59,11 +59,11 @@ func encodeBlogsRSS(w http.ResponseWriter, items []blogs.BlogInfo) {
 	io.WriteString(w, content)
 }
 
-func NewBlogsAPI(repo *blogs.Repository) *BlogsAPI {
-	return &BlogsAPI{repo: repo}
+func NewBlogsHandler(repo *blogs.Repository) *BlogsHandler {
+	return &BlogsHandler{repo: repo}
 }
 
-func (a *BlogsAPI) Read(w http.ResponseWriter, r *http.Request) {
+func (h *BlogsHandler) Read(w http.ResponseWriter, r *http.Request) {
 	collection := r.PathValue("collection")
 	var kind blogs.Kind
 	var items []blogs.BlogInfo
@@ -78,9 +78,9 @@ func (a *BlogsAPI) Read(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Collection not found", http.StatusNotFound)
 			return
 		}
-		items, err = a.repo.GetBlogsByKind(kind)
+		items, err = h.repo.GetBlogsByKind(kind)
 	} else {
-		items, err = a.repo.GetAllBlogs()
+		items, err = h.repo.GetAllBlogs()
 	}
 
 	if err != nil {
@@ -109,8 +109,8 @@ func (a *BlogsAPI) Read(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Acceptable", http.StatusNotAcceptable)
 }
 
-func (a *BlogsAPI) RSS(w http.ResponseWriter, r *http.Request) {
-	items, err := a.repo.GetAllBlogs()
+func (h *BlogsHandler) RSS(w http.ResponseWriter, r *http.Request) {
+	items, err := h.repo.GetAllBlogs()
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

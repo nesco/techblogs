@@ -9,12 +9,12 @@ import (
 )
 
 func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB) {
-	healthAPI := NewHealthAPI(startTime)
+	healthHandler := NewHealthHandler(startTime)
 	blogsRepo := blogs.NewRepository(db)
-	blogsAPI := NewBlogsAPI(blogsRepo)
+	blogsHandler := NewBlogsHandler(blogsRepo)
 
-	mux.HandleFunc("GET /health", healthAPI.Read)
-	mux.HandleFunc("GET /blogs", blogsAPI.Read)
-	mux.HandleFunc("GET /blogs/rss.xml", blogsAPI.RSS)
-	mux.HandleFunc("GET /blogs/{collection}", blogsAPI.Read)
+	mux.HandleFunc("GET /health", healthHandler.Read)
+	mux.HandleFunc("GET /blogs", blogsHandler.Read)
+	mux.HandleFunc("GET /blogs/rss.xml", blogsHandler.RSS)
+	mux.HandleFunc("GET /blogs/{collection}", blogsHandler.Read)
 }

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type HealthAPI struct {
+type HealthHandler struct {
 	startTime time.Time
 }
 
@@ -16,17 +16,17 @@ type HealthResponse struct {
 	UptimeS   float64 `json:"uptime_s"`
 }
 
-func NewHealthAPI(startTime time.Time) *HealthAPI {
-	return &HealthAPI{
+func NewHealthHandler(startTime time.Time) *HealthHandler {
+	return &HealthHandler{
 		startTime,
 	}
 }
 
-func (a *HealthAPI) Read(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Read(w http.ResponseWriter, r *http.Request) {
 	resp := HealthResponse{
 		Status:    "ok",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
-		UptimeS:   time.Since(a.startTime).Seconds(),
+		UptimeS:   time.Since(h.startTime).Seconds(),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {

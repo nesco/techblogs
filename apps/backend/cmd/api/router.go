@@ -6,15 +6,22 @@ import (
 	"time"
 
 	"github.com/nesco/techblogs/backend/internal/blogs"
+	"github.com/nesco/techblogs/backend/internal/home"
+	"go.uber.org/zap"
 )
 
-func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB) {
+func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB, logger *zap.SugaredLogger) {
 	healthHandler := NewHealthHandler(startTime)
 	blogsRepo := blogs.NewRepository(db)
 	blogsHandler := NewBlogsHandler(blogsRepo)
+	homeHandler := &home.HomeHandler{Logger: *logger}
 
-	mux.HandleFunc("GET /health", healthHandler.Read)
-	mux.HandleFunc("GET /blogs", blogsHandler.Read)
-	mux.HandleFunc("GET /blogs/rss.xml", blogsHandler.RSS)
-	mux.HandleFunc("GET /blogs/{collection}", blogsHandler.Read)
+	// Home page
+	mux.HandleFunc("GET /", homeHandler.Read)
+
+	// API endpoints
+	mux.HandleFunc("GET /api/health", healthHandler.Read)
+	mux.HandleFunc("GET /api/blogs", blogsHandler.Read)
+	mux.HandleFunc("GET /api/blogs/rss.xml", blogsHandler.RSS)
+	mux.HandleFunc("GET /api/blogs/{collection}", blogsHandler.Read)
 }

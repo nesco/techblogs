@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var api = HomeAPI{zap.SugaredLogger{}}
+var api = HomeHandler{zap.SugaredLogger{}}
 
 func TestGetHome(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

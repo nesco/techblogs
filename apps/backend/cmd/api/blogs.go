@@ -101,7 +101,7 @@ func (h *BlogsHandler) Read(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Default to HTML for text/html, */* or empty Accept header
-	if accept == "" || accept == "*/*" || strings.Contains(accept, "text/html") {
+	if accept == "" || accept == "*/*" || strings.Contains(accept, "application/fragment+xml") {
 		encodeBlogsHTML(w, items)
 		return
 	}

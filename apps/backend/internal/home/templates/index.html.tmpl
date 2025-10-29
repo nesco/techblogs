@@ -17,12 +17,28 @@
   <main class="sections-container">
     <section>
       <h2>People</h2>
-      <div class="cards-container" hx-get="/api/blogs/people" hx-trigger="load">
+      <div class="cards-container">
+        {{- range .People -}}
+        <article class="card">
+          <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+          {{- if .LatestArticleHref }}
+          <p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+          {{- end }}
+        </article>
+        {{- end -}}
       </div>
     </section>
     <section>
       <h2>Organizations</h2>
-      <div class="cards-container" hx-get="/api/blogs/organizations" hx-trigger="load">
+      <div class="cards-container">
+        {{- range .Organizations -}}
+        <article class="card">
+          <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+          {{- if .LatestArticleHref }}
+          <p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+          {{- end }}
+        </article>
+        {{- end -}}
       </div>
     </section>
 

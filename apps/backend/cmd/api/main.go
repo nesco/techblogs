@@ -77,7 +77,7 @@ func main() {
 	// Setting-up the HTTP Server
 	mux := http.NewServeMux()
 
-	registerRoutes(mux, startTime, db)
+	registerRoutes(mux, startTime, db, sugar)
 
 	addr := os.Getenv("LISTEN_ADDR")
 	ln, err := getListener(addr)

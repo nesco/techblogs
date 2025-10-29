@@ -14,7 +14,7 @@ func registerRoutes(mux *http.ServeMux, startTime time.Time, db *sql.DB, logger 
 	healthHandler := NewHealthHandler(startTime)
 	blogsRepo := blogs.NewRepository(db)
 	blogsHandler := NewBlogsHandler(blogsRepo)
-	homeHandler := &home.HomeHandler{Logger: *logger}
+	homeHandler := &home.HomeHandler{Logger: *logger, Repo: blogsRepo}
 
 	// Home page
 	mux.HandleFunc("GET /", homeHandler.Read)

@@ -19,6 +19,7 @@ type BlogInfo struct {
 	LatestArticleHref string `json:"latestArticleHref"`
 	LatestArticleName string `json:"latestArticleName"`
 	Kind              Kind   `json:"kind"`
+	GitHubHref        string `json:"githubHref"`
 }
 
 type BlogConfig struct {
@@ -27,4 +28,5 @@ type BlogConfig struct {
 	Kind                Kind
 	ArticleHrefSelector string
 	ArticleNameSelector string
+	GitHubHref          string
 }

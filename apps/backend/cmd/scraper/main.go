@@ -53,6 +53,7 @@ func main() {
 			LatestArticleName: articleName,
 			LatestArticleHref: articleHref,
 			Kind:              config.Kind,
+			GitHubHref:        config.GitHubHref,
 		}
 
 		if err := repo.UpsertBlogCache(blogInfo); err != nil {

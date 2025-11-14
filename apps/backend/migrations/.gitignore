@@ -4,4 +4,6 @@
 !001_init.up.sql
 !002_seed_blogs.down.sql
 !002_seed_blogs.up.sql
+!003_add_github_href.down.sql
+!003_add_github_href.up.sql
 

@@ -4,34 +4,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="assets/styles.css">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"> 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" type="image/png" href="/assets/favicon.png" sizes="32x32">
   <title>Tech Blogs</title>
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
 </head>
 
-<body>
-  <header>
+<body class="font-sans leading-relaxed text-gray-800 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+  <header class="bg-slate-700 text-white p-4 text-center">
     <h1>Tech Blogs</h1>
   </header>
 
-  <main class="sections-container">
-    <section>
-      <h2>People</h2>
+  <main class="max-w-7xl mx-auto my-8 px-4 pb-20 flex flex-col md:flex-row gap-8">
+    <section class="flex-1">
+      <h2 class="mb-6 text-slate-700 text-3xl font-semibold border-b-[3px] border-slate-700 pb-2">People</h2>
       <div class="cards-container">
         {{- range .People -}}
-        <article class="card">
-          <div class="card-content">
-            <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+        <article class="bg-gray-50 border border-gray-300 rounded-lg p-6 mb-4 flex-1 min-w-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+          <div class="flex-1 min-w-0">
+            <h3 class="mb-2 text-lg"><a href="{{ .BlogHref }}" class="text-blue-600 no-underline font-medium hover:underline hover:text-blue-700">{{ .BlogName }}</a></h3>
             {{- if .LatestArticleHref }}
-            <p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+            <p class="text-gray-600 text-sm">Latest: <a href="{{ .LatestArticleHref }}" class="text-blue-600 no-underline font-medium hover:underline hover:text-blue-700">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
             {{- end }}
           </div>
           {{- if .GitHubHref }}
-          <div class="card-icon">
-            <a href="{{ .GitHubHref }}" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="View GitHub profile">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div class="flex items-center pt-2 border-t border-gray-200 md:border-t-0 md:pt-0 md:flex-shrink-0 md:w-8 md:justify-center">
+            <a href="{{ .GitHubHref }}" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="View GitHub profile" class="flex items-center text-gray-500 transition-colors duration-200 hover:text-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block">
                 <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
               </svg>
             </a>
@@ -41,21 +41,21 @@
         {{- end -}}
       </div>
     </section>
-    <section>
-      <h2>Organizations</h2>
+    <section class="flex-1">
+      <h2 class="mb-6 text-slate-700 text-3xl font-semibold border-b-[3px] border-slate-700 pb-2">Organizations</h2>
       <div class="cards-container">
         {{- range .Organizations -}}
-        <article class="card">
-          <div class="card-content">
-            <h3><a href="{{ .BlogHref }}">{{ .BlogName }}</a></h3>
+        <article class="bg-gray-50 border border-gray-300 rounded-lg p-6 mb-4 flex-1 min-w-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+          <div class="flex-1 min-w-0">
+            <h3 class="mb-2 text-lg"><a href="{{ .BlogHref }}" class="text-blue-600 no-underline font-medium hover:underline hover:text-blue-700">{{ .BlogName }}</a></h3>
             {{- if .LatestArticleHref }}
-            <p>Latest: <a href="{{ .LatestArticleHref }}">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
+            <p class="text-gray-600 text-sm">Latest: <a href="{{ .LatestArticleHref }}" class="text-blue-600 no-underline font-medium hover:underline hover:text-blue-700">{{ if .LatestArticleName }}{{ .LatestArticleName }}{{ else }}{{ .LatestArticleHref }}{{ end }}</a></p>
             {{- end }}
           </div>
           {{- if .GitHubHref }}
-          <div class="card-icon">
-            <a href="{{ .GitHubHref }}" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="View GitHub profile">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div class="flex items-center pt-2 border-t border-gray-200 md:border-t-0 md:pt-0 md:flex-shrink-0 md:w-8 md:justify-center">
+            <a href="{{ .GitHubHref }}" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="View GitHub profile" class="flex items-center text-gray-500 transition-colors duration-200 hover:text-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block">
                 <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
               </svg>
             </a>
@@ -69,8 +69,8 @@
   </main>
 
 
-  <footer>
-    <p>Tech blog aggregator by <a href="mailto:emmanuel@federbusch.fr">Emmanuel Federbusch</a> | <a href="/api/blogs/rss.xml">RSS Feed</a></p>
+  <footer class="text-center fixed bottom-0 w-full p-4 bg-gray-50 mt-8 text-gray-600">
+    <p>Tech blog aggregator by <a href="mailto:emmanuel@federbusch.fr" class="text-blue-600 hover:underline">Emmanuel Federbusch</a> | <a href="/api/blogs/rss.xml" class="text-blue-600 hover:underline">RSS Feed</a></p>
   </footer>
 
 </body>

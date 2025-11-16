@@ -76,7 +76,15 @@ func scrapeBlog(config blogs.BlogConfig) (articleName string, articleHref string
 		return "", "", nil
 	}
 
-	resp, err := client.Get(config.BlogHref)
+	req, err := http.NewRequest("GET", config.BlogHref, nil)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set custom user agent
+	req.Header.Set("User-Agent", "TechBlogs-Scraper/1.0 (+https://github.com/nesco/techblogs)")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch blog: %w", err)
 	}

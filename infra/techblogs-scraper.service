@@ -8,8 +8,9 @@ Type=oneshot
 User=techblogs
 Group=www-data
 Environment=DB_PATH=/srv/techblogs/data/techblogs.db
+Environment=SQLITE_TMPDIR=/srv/techblogs/data
 ExecStart=/srv/techblogs/current/backend/techblogs-scraper
-WorkingDirectory=/srv/techblogs/current/backend
+WorkingDirectory=/srv/techblogs
 
 # Security hardening
 NoNewPrivileges=true

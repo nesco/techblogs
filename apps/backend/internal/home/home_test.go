@@ -30,6 +30,7 @@ func TestGetHome(t *testing.T) {
 			latest_article_name TEXT,
 			latest_article_href TEXT,
 			kind TEXT NOT NULL CHECK (kind IN ('organization', 'individual')),
+			github_href TEXT NOT NULL DEFAULT '',
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
